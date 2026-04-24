@@ -27,6 +27,21 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include "profile.h"
 #include "screen.h"
 
+extern struct zmk_endpoint_instance zmk_endpoint_get_selected(void) __attribute__((weak));
+extern struct zmk_endpoint_instance zmk_endpoints_selected(void) __attribute__((weak));
+
+static struct zmk_endpoint_instance zmk_endpoint_get_selected_compat(void) {
+    if (zmk_endpoint_get_selected != NULL) {
+        return zmk_endpoint_get_selected();
+    }
+
+    if (zmk_endpoints_selected != NULL) {
+        return zmk_endpoints_selected();
+    }
+
+    return (struct zmk_endpoint_instance){.transport = ZMK_TRANSPORT_NONE};
+}
+
 struct connection_status_state {
     bool connected;
 };
@@ -171,7 +186,7 @@ static void output_status_update_cb(struct output_status_state state) {
 
 static struct output_status_state output_status_get_state(const zmk_event_t *_eh) {
     return (struct output_status_state){
-        .selected_endpoint = zmk_endpoints_selected(),
+        .selected_endpoint = zmk_endpoint_get_selected_compat(),
         .active_profile_index = zmk_ble_active_profile_index(),
         .active_profile_connected = zmk_ble_active_profile_is_connected(),
         .active_profile_bonded = !zmk_ble_active_profile_is_open(),
@@ -211,4 +226,3 @@ int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
 }
 
 lv_obj_t *zmk_widget_screen_obj(struct zmk_widget_screen *widget) { return widget->obj; }
-
